@@ -1,0 +1,11 @@
+streamlit
+langchain
+langgraph
+langchain-google-genai
+langchain_community
+pydantic
+pypdf
+python-docx
+docx2pdf
+faiss-cpu
+python-dotenv 
