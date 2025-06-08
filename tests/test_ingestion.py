@@ -26,67 +26,75 @@ class TestIngestion(unittest.TestCase):
     def test_parse_master_resume_identifies_all_sections(self):
         """
         Tests that the resume parser correctly identifies all major sections
-        from a sample text block, regardless of header case.
+        based on the specific hardcoded headers.
         """
         sample_text = """
         John Doe
         john.doe@email.com | 555-1234 | github.com/johndoe
 
-        SUMMARY
+        Summary
         A highly motivated and experienced software engineer.
+
+        Skills and Interests
+        Python, JavaScript, SQL, AWS, Docker
+
+        Education
+        B.S. in Computer Science - State University (2016 - 2020)
 
         Work Experience
         Software Engineer at Tech Corp (2020 - Present)
         - Developed and maintained web applications.
 
-        EDUCATION
-        B.S. in Computer Science - State University (2016 - 2020)
-
-        sKiLlS
-        Python, JavaScript, SQL, AWS, Docker
-
-        PrOjEcTs
-        AI-Powered Chatbot
-        - Created a customer service chatbot using TensorFlow.
+        Projects
+        Movie Rating and Recommendations Website
+        - An app for ranking movies.
+        AI Job Application Email Assistant
+        - An assistant for writing emails.
         """
         data = parse_master_resume(sample_text)
 
+        # According to the user's logic, this contains everything up to "Skills and Interests"
         self.assertIn("John Doe", data["summary_and_contact"])
-        self.assertTrue(data["experience"].strip().startswith("Software Engineer"))
-        self.assertTrue(data["education"].strip().startswith("B.S. in Computer Science"))
+        self.assertIn("A highly motivated", data["summary_and_contact"])
+        
+        # Test other sections based on the rigid parsing
         self.assertTrue(data["skills"].strip().startswith("Python"))
-        self.assertEqual(len(data["projects"]), 1)
-        self.assertEqual(data["projects"][0]["title"], "AI-Powered Chatbot")
+        self.assertTrue(data["education"].strip().startswith("B.S. in Computer Science"))
+        self.assertTrue(data["experience"].strip().startswith("Software Engineer"))
+        
+        # Test that hardcoded project titles are found
+        self.assertEqual(len(data["projects"]), 2)
+        self.assertEqual(data["projects"][0]["title"], "Movie Rating and Recommendations Website")
+        self.assertEqual(data["projects"][1]["title"], "AI Job Application Email Assistant")
 
-    def test_parse_projects_section_handles_multiple_projects(self):
+    def test_parse_projects_section_handles_hardcoded_titles(self):
         """
         Tests that the project parser can correctly identify and separate
-        multiple distinct projects from a text block.
+        multiple distinct projects from a text block using its hardcoded titles.
         """
         project_text = """
-        Project Alpha
-        - Built a cool web app using Python and Flask.
-        - Deployed it on AWS infrastructure.
-
-        Another Project (Beta)
-        - Developed a cross-platform mobile app with React Native.
-        - Integrated with a RESTful API for data fetching.
+        Some intro text that should be ignored.
+        ASL Flashcard App
+        - Developed a Flashcard application for learning American Sign Language.
+        Bookstore Project
+        - We collaboratively built a user-friendly GUI for an online bookstore.
+        Some text after projects that should be ignored.
         """
         
         # We test the parsing logic via the main function
-        data = parse_master_resume("PROJECTS\n" + project_text)
+        data = parse_master_resume("Projects\n" + project_text)
         projects = data.get("projects", [])
 
         self.assertEqual(len(projects), 2)
-        self.assertEqual(projects[0]["title"], "Project Alpha")
-        self.assertIn("Flask", projects[0]["description"])
-        self.assertEqual(projects[1]["title"], "Another Project (Beta)")
-        self.assertIn("React Native", projects[1]["description"])
+        self.assertEqual(projects[0]["title"], "ASL Flashcard App")
+        self.assertIn("American Sign Language", projects[0]["description"])
+        self.assertEqual(projects[1]["title"], "Bookstore Project")
+        self.assertIn("online bookstore", projects[1]["description"])
 
-    def test_empty_sections_are_handled_gracefully(self):
+    def test_empty_sections_are_handled_by_rigid_parser(self):
         """
-        Tests that the parser does not fail and returns empty values for
-        sections that are missing from the resume text.
+        Tests that the parser returns empty values for sections when their
+        bounding headers are missing, according to its logic.
         """
         sample_text = """
         Jane Smith
@@ -97,10 +105,14 @@ class TestIngestion(unittest.TestCase):
         """
         data = parse_master_resume(sample_text)
 
+        # The user's parser requires specific start and end headers.
+        # Without `Skills and Interests` or `Work Experience`, it won't find education.
+        # This test now asserts the actual behavior of the hardcoded parser.
         self.assertEqual(data["experience"], "")
         self.assertEqual(data["skills"], "")
+        self.assertEqual(data["education"], "")
         self.assertEqual(len(data["projects"]), 0)
-        self.assertTrue(data["education"].strip().startswith("M.A. in English"))
+
 
 if __name__ == "__main__":
     unittest.main() 
