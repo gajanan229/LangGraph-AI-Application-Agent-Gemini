@@ -42,7 +42,8 @@ def _parse_projects_section(project_text: str) -> List[Dict[str, str]]:
         "Family Travel Map Tracker",
         "RESTful Blog API & Client with Authentication",
         "Notes App with the PERN stack",
-        "Portfolio Blog with AI Chatbot Integration, gajanan.live"
+        "Portfolio Blog with AI Chatbot Integration, gajanan.live",
+        "AI-Powered Resume & Cover Letter Generator"
     ]
     
     # Split the text based on project titles

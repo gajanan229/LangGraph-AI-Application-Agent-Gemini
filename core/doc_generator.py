@@ -18,6 +18,27 @@ def _delete_paragraph(paragraph: Paragraph):
         p_element.getparent().remove(p_element)
 
 
+def _add_formatted_text_to_paragraph(p: Paragraph, text: str):
+    """
+    Adds text to a paragraph, parsing double asterisks for bolding.
+    Example: "This is **bold** text."
+    """
+    p.clear()  # Clear any existing runs, like the placeholder text
+    parts = text.split('**')
+    for i, part in enumerate(parts):
+        if not part:
+            continue
+        # Parts at odd indices are bold
+        is_bold = (i % 2 == 1)
+        run = p.add_run(part)
+        run.bold = is_bold
+        # Preserve the font size of the original paragraph style if possible
+        if p.style and p.style.font:
+            run.font.size = p.style.font.size
+        else: # Fallback for project bullets which might not have a style
+            run.font.size = Pt(10.5)
+
+
 def _find_first_paragraph_with_text(doc: DocxDocument, text: str) -> Optional[Paragraph]:
     """Finds the first paragraph containing the given text."""
     for p in doc.paragraphs:
@@ -77,26 +98,19 @@ def _create_project_title(doc: DocxDocument, title: str, insert_before: Paragrap
 
 def _create_project_bullet(doc: DocxDocument, bullet_text: str, insert_before: Paragraph) -> Paragraph:
     """
-    Creates a properly formatted bullet point paragraph.
-    Normal text, list bullet style, 10.5 font size.
+    Creates a properly formatted bullet point paragraph with bolding support.
     """
-    new_para = insert_before.insert_paragraph_before(bullet_text)
+    new_para = insert_before.insert_paragraph_before() # Create empty para
     
-    # Clear any existing runs and create a new one with formatting
-    new_para.clear()
-    run = new_para.add_run(bullet_text)
-    run.font.size = Pt(10.5)
-    
-    # Apply bullet list style
-    # Try to set a bullet style if available, otherwise use a simple bullet
+    # Set bullet list style first
     try:
         new_para.style = 'List Bullet'
-    except:
-        # If 'List Bullet' style doesn't exist, create a manual bullet
-        new_para.text = f"• {bullet_text}"
-        new_para.clear()
-        run = new_para.add_run(f"• {bullet_text}")
-        run.font.size = Pt(10.5)
+    except Exception:
+        # Fallback if 'List Bullet' style doesn't exist. Prepend bullet manually.
+        bullet_text = f"• {bullet_text}"
+
+    # Now add the formatted text
+    _add_formatted_text_to_paragraph(new_para, bullet_text)
     
     # Remove extra spacing
     new_para.paragraph_format.space_before = Pt(0)
@@ -118,9 +132,9 @@ def create_resume_pdf(
     doc = Document(resume_template_path)
 
     # 1. Replace Summary
-    for p in doc.paragraphs:
-        if "[SUMMARY]" in p.text:
-            _replace_text_in_paragraph(p, "[SUMMARY]", summary_text)
+    summary_anchor = _find_first_paragraph_with_text(doc, "[SUMMARY]")
+    if summary_anchor:
+        _add_formatted_text_to_paragraph(summary_anchor, summary_text)
 
     # 2. Handle legacy project placeholders (remove if they exist)
     title_anchor = _find_first_paragraph_with_text(doc, "[PROJECT TITLE]")
@@ -142,9 +156,11 @@ def create_resume_pdf(
             
             # Since we're using insert_paragraph_before(), the last thing inserted appears first
             # So we insert title LAST so it appears ABOVE the bullet points
+            # Titles are not expected to be bolded, so this is fine.
             _create_project_title(doc, project.get("title", ""), insertion_point)
             
-            # Insert bullet points in normal order (not reversed) since title is now first
+            # Insert bullet points in normal order (not reversed)
+            # The _create_project_bullet function now handles bolding
             for point in bullet_points:
                 _create_project_bullet(doc, point, insertion_point)
         

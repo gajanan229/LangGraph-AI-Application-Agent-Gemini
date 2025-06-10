@@ -48,6 +48,9 @@ default_keys = {
     "rag_retrievers": None,
     "resume_generated": False,
     "cover_letter_generated": False,
+    # --- State for generated content ---
+    "graph_state": None, # Will hold the entire state of the LangGraph
+    "resume_is_too_long": False,
     "generated_summary": "",
     "generated_projects": {},
     "generated_cl_intro": "",
@@ -149,15 +152,16 @@ if st.session_state.ui_stage == "upload":
 # --- STAGE 2: RESUME STUDIO ---
 elif st.session_state.ui_stage == "resume_studio":
     st.header("📝 Step 2: Resume Studio")
-    
+
+    # --- Initial Generation ---
     if not st.session_state.resume_generated:
         st.info("🤖 Ready to generate your tailored resume using AI agents!")
-        
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("✨ Generate Resume Content", type="primary"):
-                with st.spinner("🤖 AI agents are analyzing and generating content..."):
+            if st.button("✨ Generate Resume & Cover Letter", type="primary"):
+                with st.spinner("🤖 AI agents are analyzing and generating content... This may take a moment."):
                     app = get_app_graph()
+                    # Populate all fields required by the graph state
                     initial_state: GraphState = {
                         "job_description_text": st.session_state.job_description_text,
                         "master_resume_structured": st.session_state.structured_resume,
@@ -165,75 +169,176 @@ elif st.session_state.ui_stage == "resume_studio":
                         "selected_project_titles": [],
                         "generated_resume_summary": "",
                         "generated_resume_projects": {},
+                        "generated_resume_full_text": "",
+                        "resume_line_count": 0,
+                        "resume_is_too_long": False,
+                        "resume_fix_choice": "",
                         "generated_cl_intro": "",
                         "generated_cl_conclusion": "",
                         "generated_cl_body": "",
                         "cl_feedback_history": [],
                         "user_action": "",
                     }
+                    # This single invocation will run the graph until it hits a stopping point
+                    # (like the end) or a point where it needs user input.
                     final_state = app.invoke(initial_state)
 
-                    # Store generated content
-                    st.session_state.generated_summary = final_state["generated_resume_summary"]
-                    st.session_state.generated_projects = final_state["generated_resume_projects"]
-                    st.session_state.generated_cl_intro = final_state["generated_cl_intro"]
-                    st.session_state.generated_cl_body = final_state["generated_cl_body"]
-                    st.session_state.generated_cl_conclusion = final_state["generated_cl_conclusion"]
+                    # Store the entire state and update individual keys for UI convenience
+                    st.session_state.graph_state = final_state
+                    st.session_state.generated_summary = final_state.get("generated_resume_summary", "")
+                    st.session_state.generated_projects = final_state.get("generated_resume_projects", {})
+                    st.session_state.generated_cl_intro = final_state.get("generated_cl_intro", "")
+                    st.session_state.generated_cl_body = final_state.get("generated_cl_body", "")
+                    st.session_state.generated_cl_conclusion = final_state.get("generated_cl_conclusion", "")
+                    st.session_state.resume_is_too_long = final_state.get("resume_is_too_long", False)
+                    
                     st.session_state.resume_generated = True
-                    st.session_state.cover_letter_generated = True
                 st.rerun()
-    
+
+    # --- Interactive Review and Editing ---
     if st.session_state.resume_generated:
+        # Check if the resume is too long from the last graph run
+        if st.session_state.graph_state.get("resume_is_too_long", False):
+            st.warning("⚠️ The generated resume is too long and may not fit on one page.")
+            st.info(f"Estimated lines: {st.session_state.graph_state.get('resume_line_count', 'N/A')}. Page limit is 58.")
+
+            st.write("How would you like to proceed?")
+            btn_cols = st.columns(2)
+            with btn_cols[0]:
+                if st.button("🤖 Let AI Fix It", type="primary", use_container_width=True):
+                    with st.spinner("🤖 AI is shortening the resume... This may take a few iterations."):
+                        current_state = st.session_state.graph_state
+                        current_state["resume_fix_choice"] = "AGENT_FIX"
+
+                        app = get_app_graph()
+                        # Re-invoke the graph. It will now loop until the length is fixed.
+                        final_state = app.invoke(current_state)
+
+                        # Update session state with the new, shortened result
+                        st.session_state.graph_state = final_state
+                        st.session_state.generated_summary = final_state.get("generated_resume_summary", "")
+                        st.session_state.generated_projects = final_state.get("generated_resume_projects", {})
+                    st.rerun()
+            
+            with btn_cols[1]:
+                if st.button("✍️ I'll Fix It Manually", use_container_width=True):
+                    with st.spinner("Finalizing resume content..."):
+                        current_state = st.session_state.graph_state
+                        current_state["resume_fix_choice"] = "USER_FIX"
+
+                        app = get_app_graph()
+                        # Re-invoke to push the graph past the decision node to completion
+                        final_state = app.invoke(current_state)
+                        st.session_state.graph_state = final_state
+                        # Manually override the flag since the user is taking over
+                        st.session_state.graph_state['resume_is_too_long'] = False
+                    st.rerun()
+
+        # Display editable content and preview
         col1, col2 = st.columns([0.4, 0.6])
         
         with col1:
             st.subheader("📝 Generated Content")
-            
-            # Editable summary
             st.session_state.generated_summary = st.text_area(
                 "Professional Summary", 
                 st.session_state.generated_summary, 
-                height=150,
-                help="Edit the summary to better match your style"
+                height=150
             )
             
-            # Editable projects
             st.subheader("🚀 Tailored Projects")
-            for title, text in st.session_state.generated_projects.items():
+            
+            # --- New Multi-select for Project Selection ---
+            all_project_titles = [p['title'] for p in st.session_state.structured_resume.get('projects', [])]
+            ai_selected_titles = st.session_state.graph_state.get("selected_project_titles", [])
+            
+            # Ensure all AI-selected titles are valid options
+            valid_ai_titles = [t for t in ai_selected_titles if t in all_project_titles]
+
+            user_selected_titles = st.multiselect(
+                "Select projects to include:",
+                options=all_project_titles,
+                default=valid_ai_titles,
+                help="Add or remove projects. Click 'Update Preview' to rewrite and see changes."
+            )
+            
+            # Display text areas for the currently selected projects
+            for title in user_selected_titles:
+                text = st.session_state.generated_projects.get(title, "")
                 st.session_state.generated_projects[title] = st.text_area(
-                    f"Project: {title}", 
-                    text, 
-                    height=150, 
-                    key=f"proj_{title}",
-                    help="Edit the project description to highlight specific achievements"
+                    f"Project: {title}", text, height=150, key=f"proj_{title}"
                 )
 
             # Action buttons
+            st.divider()
             col1_1, col1_2 = st.columns(2)
             with col1_1:
-                if st.button("🔄 Update Preview"):
+                # This button now triggers a graph re-run to rewrite projects if the selection changed.
+                if st.button("🔄 Update Preview", use_container_width=True):
+                    with st.spinner("Updating resume with your selections..."):
+                        current_state = st.session_state.graph_state
+                        # Update the state with the user's new selections before invoking
+                        current_state['selected_project_titles'] = user_selected_titles
+                        
+                        # Clear the action so we don't accidentally proceed to CL
+                        current_state['user_action'] = ""
+
+                        app = get_app_graph()
+                        final_state = app.invoke(current_state)
+                        
+                        # Update session state with the result
+                        st.session_state.graph_state = final_state
+                        st.session_state.generated_summary = final_state.get("generated_resume_summary", "")
+                        st.session_state.generated_projects = final_state.get("generated_resume_projects", {})
                     st.rerun()
+
             with col1_2:
-                if st.button("➡️ Proceed to Cover Letter", type="primary"):
-                    st.session_state.ui_stage = "cover_letter_studio"
-                    st.rerun()
+                # Only allow proceeding if the length issue is resolved
+                if not st.session_state.graph_state.get("resume_is_too_long", False):
+                    # The button now just sets the state and re-invokes to trigger CL generation
+                    if st.button("➡️ Proceed to Cover Letter", type="primary", use_container_width=True):
+                        with st.spinner("Generating cover letter..."):
+                            current_state = st.session_state.graph_state
+                            # Set the action that the graph's router is waiting for
+                            current_state['user_action'] = "PROCEED_TO_CL"
+                            
+                            app = get_app_graph()
+                            final_state = app.invoke(current_state)
+
+                            # Update the entire state
+                            st.session_state.graph_state = final_state
+                            st.session_state.generated_cl_intro = final_state.get("generated_cl_intro", "")
+                            st.session_state.generated_cl_body = final_state.get("generated_cl_body", "")
+                            st.session_state.generated_cl_conclusion = final_state.get("generated_cl_conclusion", "")
+                            st.session_state.cover_letter_generated = True
+                        
+                        st.session_state.ui_stage = "cover_letter_studio"
+                        st.rerun()
+                else:
+                    st.button("➡️ Proceed to Cover Letter", disabled=True, use_container_width=True)
 
         with col2:
             st.subheader("📄 Live Resume Preview")
             with st.spinner("📄 Generating PDF preview..."):
-                # Prepare project data for the generator function
                 project_data_for_pdf = [
                     {"title": title, "rewritten_text": text}
                     for title, text in st.session_state.generated_projects.items()
+                    if title in st.session_state.graph_state.get("selected_project_titles", [])
                 ]
 
+                # Update the graph state with manually edited text before generating PDF
+                current_summary = st.session_state.generated_summary
+                current_projects = st.session_state.generated_projects
+                st.session_state.graph_state['generated_resume_summary'] = current_summary
+                st.session_state.graph_state['generated_resume_projects'] = current_projects
+                
+                # Always generate and display the PDF preview, even if it's too long,
+                # so the user can make an informed decision.
                 st.session_state.final_resume_pdf = create_resume_pdf(
                     resume_template_path="Templates/resume_template.docx",
                     project_template_path="Templates/Project_template.docx",
-                    summary_text=st.session_state.generated_summary,
+                    summary_text=current_summary,
                     project_data=project_data_for_pdf,
                 )
-                
                 display_pdf_preview(st.session_state.final_resume_pdf, height=700)
 
 # --- STAGE 3: COVER LETTER STUDIO ---
@@ -301,12 +406,14 @@ elif st.session_state.ui_stage == "cover_letter_studio":
                         "user_action": "REGENERATE_CL",
                     }
                     
-                    final_state = app.invoke(regen_state)
+                    # In regeneration, we also need to pass the full state
+                    final_state = app.invoke({**st.session_state.graph_state, **regen_state})
                     
                     # Update with regenerated content
-                    st.session_state.generated_cl_intro = final_state["generated_cl_intro"]
-                    st.session_state.generated_cl_body = final_state["generated_cl_body"]
-                    st.session_state.generated_cl_conclusion = final_state["generated_cl_conclusion"]
+                    st.session_state.graph_state = final_state
+                    st.session_state.generated_cl_intro = final_state.get("generated_cl_intro", "")
+                    st.session_state.generated_cl_body = final_state.get("generated_cl_body", "")
+                    st.session_state.generated_cl_conclusion = final_state.get("generated_cl_conclusion", "")
                 st.rerun()
         
         with col1_2:
