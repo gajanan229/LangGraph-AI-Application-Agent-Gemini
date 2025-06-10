@@ -38,7 +38,7 @@ def setup_rag_pipeline(structured_master_resume: Dict[str, Any]) -> Dict[str, An
     if not projects:
         # Return an empty retriever if there are no projects to process
         return {"projects": None}
-
+    
     # Create LangChain Document objects for each project
     project_docs = []
     for project in projects:
@@ -55,4 +55,4 @@ def setup_rag_pipeline(structured_master_resume: Dict[str, Any]) -> Dict[str, An
     # Create a retriever from the vector store
     project_retriever = project_vector_store.as_retriever(search_kwargs={"k": 5})
 
-    return {"projects": project_retriever} 
+    return {"projects": projects} 

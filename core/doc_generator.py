@@ -6,6 +6,8 @@ import pythoncom
 from docx import Document
 from docx.document import Document as DocxDocument
 from docx.text.paragraph import Paragraph
+from docx.shared import Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx2pdf import convert
 
 
@@ -35,6 +37,74 @@ def _replace_text_in_paragraph(p: Paragraph, placeholder: str, value: str):
             break  # Assume placeholder appears only once per paragraph
 
 
+def _find_projects_insertion_point(doc: DocxDocument) -> Optional[Paragraph]:
+    """
+    Finds the appropriate insertion point for projects.
+    First tries to find "[PROJECTS_SECTION]" placeholder, 
+    then falls back to inserting before the last paragraph.
+    """
+    # First try to find a projects section placeholder
+    projects_placeholder = _find_first_paragraph_with_text(doc, "[PROJECTS_SECTION]")
+    if projects_placeholder:
+        return projects_placeholder
+    
+    # Fallback: insert before the last paragraph (usually contact info or footer)
+    if doc.paragraphs:
+        return doc.paragraphs[-1]
+    
+    return None
+
+
+def _create_project_title(doc: DocxDocument, title: str, insert_before: Paragraph) -> Paragraph:
+    """
+    Creates a properly formatted project title paragraph.
+    Bold text, 10.5 font size.
+    """
+    new_para = insert_before.insert_paragraph_before(title)
+    
+    # Clear any existing runs and create a new one with formatting
+    new_para.clear()
+    run = new_para.add_run(title)
+    run.bold = True
+    run.font.size = Pt(10.5)
+    
+    # Remove extra spacing
+    new_para.paragraph_format.space_before = Pt(0)
+    new_para.paragraph_format.space_after = Pt(0)
+    
+    return new_para
+
+
+def _create_project_bullet(doc: DocxDocument, bullet_text: str, insert_before: Paragraph) -> Paragraph:
+    """
+    Creates a properly formatted bullet point paragraph.
+    Normal text, list bullet style, 10.5 font size.
+    """
+    new_para = insert_before.insert_paragraph_before(bullet_text)
+    
+    # Clear any existing runs and create a new one with formatting
+    new_para.clear()
+    run = new_para.add_run(bullet_text)
+    run.font.size = Pt(10.5)
+    
+    # Apply bullet list style
+    # Try to set a bullet style if available, otherwise use a simple bullet
+    try:
+        new_para.style = 'List Bullet'
+    except:
+        # If 'List Bullet' style doesn't exist, create a manual bullet
+        new_para.text = f"• {bullet_text}"
+        new_para.clear()
+        run = new_para.add_run(f"• {bullet_text}")
+        run.font.size = Pt(10.5)
+    
+    # Remove extra spacing
+    new_para.paragraph_format.space_before = Pt(0)
+    new_para.paragraph_format.space_after = Pt(0)
+    
+    return new_para
+
+
 def create_resume_pdf(
     resume_template_path: str,
     project_template_path: str, # This will be ignored but kept for compatibility
@@ -52,30 +122,35 @@ def create_resume_pdf(
         if "[SUMMARY]" in p.text:
             _replace_text_in_paragraph(p, "[SUMMARY]", summary_text)
 
-    # 2. Inject Projects
-    # Find the style templates and the anchor point for insertion
+    # 2. Handle legacy project placeholders (remove if they exist)
     title_anchor = _find_first_paragraph_with_text(doc, "[PROJECT TITLE]")
     bullets_anchor = _find_first_paragraph_with_text(doc, "[PROJECT BULLET POINTS]")
+    
+    if title_anchor:
+        _delete_paragraph(title_anchor)
+    if bullets_anchor:
+        _delete_paragraph(bullets_anchor)
 
-    if title_anchor and bullets_anchor:
-        title_style = title_anchor.style
-        bullet_style = bullets_anchor.style
-
-        # Insert projects before the title anchor
+    # 3. Insert Projects with Manual Formatting
+    insertion_point = _find_projects_insertion_point(doc)
+    
+    if insertion_point and project_data:
+        # Insert projects in reverse order since we're inserting before
         for project in reversed(project_data):
-            # Split rewritten text into bullet points, filtering out empty lines
+            # Get bullet points, filtering out empty lines
             bullet_points = [b.strip() for b in project.get("rewritten_text", "").split('\n') if b.strip()]
             
-            # Insert bullet points in reverse order to maintain correct sequence
-            for point in reversed(bullet_points):
-                title_anchor.insert_paragraph_before(point, style=bullet_style)
+            # Since we're using insert_paragraph_before(), the last thing inserted appears first
+            # So we insert title LAST so it appears ABOVE the bullet points
+            _create_project_title(doc, project.get("title", ""), insertion_point)
             
-            # Insert the project title
-            title_anchor.insert_paragraph_before(project.get("title", ""), style=title_style)
+            # Insert bullet points in normal order (not reversed) since title is now first
+            for point in bullet_points:
+                _create_project_bullet(doc, point, insertion_point)
         
-        # 3. Cleanup placeholders
-        _delete_paragraph(title_anchor)
-        _delete_paragraph(bullets_anchor)
+        # Remove the placeholder if it was "[PROJECTS_SECTION]"
+        if "[PROJECTS_SECTION]" in insertion_point.text:
+            _delete_paragraph(insertion_point)
 
     # 4. Save and Convert to PDF
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -101,38 +176,59 @@ def create_cover_letter_pdf(
     Builds a cover letter by populating a DOCX template, then converts to PDF.
     """
     doc = Document(template_path)
-    
-    # Replace simple placeholders
-    for p in doc.paragraphs:
-        if "[INTRODUCTION]" in p.text:
-            _replace_text_in_paragraph(p, "[INTRODUCTION]", intro)
-        if "[CONCLUSION]" in p.text:
-            _replace_text_in_paragraph(p, "[CONCLUSION]", conclusion)
 
-    # Handle the multi-line body
+    # --- Find all placeholders first to get stable references ---
+    intro_anchor = _find_first_paragraph_with_text(doc, "[INTRODUCTION]")
     body_anchor = _find_first_paragraph_with_text(doc, "[BODY]")
+    conclusion_anchor = _find_first_paragraph_with_text(doc, "[CONCLUSION]")
+
+    # --- Process Introduction ---
+    if intro_anchor:
+        _replace_text_in_paragraph(intro_anchor, "[INTRODUCTION]", intro)
+        intro_anchor.paragraph_format.space_before = Pt(6)
+        intro_anchor.paragraph_format.space_after = Pt(6)
+
+    # --- Process Conclusion ---
+    if conclusion_anchor:
+        _replace_text_in_paragraph(conclusion_anchor, "[CONCLUSION]", conclusion)
+        conclusion_anchor.paragraph_format.space_before = Pt(0)
+        conclusion_anchor.paragraph_format.space_after = Pt(6)
+
+    # --- Process Body ---
     if body_anchor:
         body_lines = [line.strip() for line in body.split('\n') if line.strip()]
         if body_lines:
-            # Set the first line in the anchor paragraph
+            # Replace the anchor paragraph's text with the first line.
             body_anchor.text = body_lines[0]
-            # Insert subsequent lines after the anchor
-            cursor = body_anchor
-            for line in body_lines[1:]:
-                new_p = cursor.insert_paragraph_before(line, style=body_anchor.style)
-                # This inserts before, so we don't need to manage the cursor manually.
-                # To keep order, insert all before the *next* paragraph, or just
-                # insert them all before the original anchor and they will be in order.
-            
-            # Let's use the same reverse-insertion logic as the resume for simplicity
-            for line in reversed(body_lines[1:]):
-                body_anchor.insert_paragraph_before(line, style=body_anchor.style)
-            body_anchor.text = body_lines[0] # set first line last
+            body_anchor.paragraph_format.space_before = Pt(0)
+            body_anchor.paragraph_format.space_after = Pt(6)
 
+            # Find the paragraph following the anchor to use as a reference.
+            anchor_element = body_anchor._p
+            all_paragraphs = list(doc.paragraphs)
+            reference_paragraph = None
+            for i, p in enumerate(all_paragraphs):
+                if p._p == anchor_element and i + 1 < len(all_paragraphs):
+                    reference_paragraph = all_paragraphs[i + 1]
+                    break
+            
+            # Insert the rest of the body lines before the reference paragraph.
+            if reference_paragraph and len(body_lines) > 1:
+                for line in reversed(body_lines[1:]):
+                    new_para = reference_paragraph.insert_paragraph_before(line)
+                    new_para.style = body_anchor.style
+                    new_para.paragraph_format.space_before = Pt(0)
+                    new_para.paragraph_format.space_after = Pt(6)
+            elif len(body_lines) > 1:
+                # Fallback if [BODY] is the last thing in the document.
+                for line in body_lines[1:]:
+                    new_para = doc.add_paragraph(line, style=body_anchor.style)
+                    new_para.paragraph_format.space_before = Pt(0)
+                    new_para.paragraph_format.space_after = Pt(6)
         else:
-            # If body is empty, remove the placeholder
+            # If body is empty, remove the placeholder paragraph.
             _delete_paragraph(body_anchor)
-    
+
     # Save and Convert to PDF
     with tempfile.TemporaryDirectory() as tmpdir:
         docx_path = os.path.join(tmpdir, "final_cl.docx")
