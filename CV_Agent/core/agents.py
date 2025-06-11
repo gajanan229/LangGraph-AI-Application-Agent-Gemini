@@ -148,7 +148,7 @@ def generate_summary(state: "GraphState") -> Dict[str, Any]:
     resume_context = structured_resume['full_text']
 
     prompt = f"""
-    You are an expert resume writer. Synthesize the provided job description and the candidate's full resume to write a concise, professional summary (3-4 sentences).
+    You are an expert resume writer. Synthesize the provided job description and the candidate's full resume to write a concise, professional summary (3-4 sentences), write it in first person.
     This summary must be tailored specifically to the job, highlighting the most relevant skills and experiences.
     Start with a powerful statement about the candidate's profile, also mention the year of study and the degree. **You must wrap the year of study in double asterisks (e.g., `**third-year**`) and nothing else.**
 
@@ -193,6 +193,7 @@ def rewrite_projects(state: "GraphState") -> Dict[str, Any]:
                 - To avoid over-bolding, **do not bold the same keyword more than once** in this section. Choose its most impactful location.
             4. The FINAL sentence must start with "Technologies used:", followed by a list of technologies. You may bold any technologies that appear in the job description.
             5. Do NOT invent or assume any facts; use only the information provided.
+            6. only return the rewritten project description, no other text.
 
             TARGET JOB DESCRIPTION:
             {jd_text}

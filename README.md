@@ -1,138 +1,96 @@
-# AI-Powered Resume & Cover Letter Generator
+# Automated Application Co-Pilot
 
-An intelligent application that uses **LangGraph** and **Google Gemini AI** to automatically generate tailored resumes and cover letters based on job descriptions. Built with a modern Streamlit interface, this tool analyzes your master resume and creates customized application documents that highlight the most relevant skills and experiences for each specific role.
+## Vision
+The Automated Application Co-Pilot is a personal assistant that removes the busy-work from internship and co-op applications.  It automatically scouts new postings, crafts role-specific resumes & cover letters with generative AI, and can even submit the application on your behalf – all from a single web dashboard.
 
-## Key Features
+By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you focus on interview preparation and skill-building instead of formatting documents and filling portals.
 
-- **AI-Powered Content Generation**: Uses Google Gemini 2.0 Flash to intelligently rewrite resume sections and generate cover letters
-- **Smart Project Selection**: RAG-powered system automatically selects the most relevant projects from your master resume
-- **Interactive Editing**: Real-time content editing with immediate regeneration capabilities
-- **Length Optimization**: Automatic resume length checking with AI-powered shortening when needed
-- **Professional Formatting**: Generates polished PDF documents using predefined templates
-- **Streamlit UI**: Clean, intuitive web interface with step-by-step workflow
+---
 
-## Architecture
+## Current Status
+| Area | Module / Folder | Status |
+|------|-----------------|--------|
+| Resume & Cover-letter generation | `CV_Agent/` | **✅  Complete** – fully-functional Streamlit MVP generates tailored PDFs.  See `CV_Agent/README.md` for details. |
+| University job-board scraper | `Job_Scraper/` | 🛠  In progress |
+| University portal auto-apply agent | _planned_ | ⏳ Not started |
+| External job-board auto-apply agent | _planned_ | ⏳ Not started |
+| External job-board scraper | _optional_ | ⏳ Not started |
+| React + FastAPI full-stack UI | _planned_ | ⏳ Not started |
+| Web search enrichment for CV agent | _optional_ | ⏳ Not started |
 
-The application is built using **LangGraph** to orchestrate a multi-agent workflow:
+---
 
-- **Project Selector Agent**: Identifies most relevant projects using vector similarity search
-- **Summary Generator Agent**: Creates tailored professional summaries
-- **Project Rewriter Agent**: Rewrites project descriptions with job-specific keywords
-- **Cover Letter Agents**: Generate introduction, body, and conclusion sections
-- **Length Monitor Agent**: Ensures resume fits within optimal length constraints
+## Roadmap
+1. **Finish Job_Scraper**  
+   • Log-in to university career portal  
+   • Persist new postings to `Input-Documents/Job-Descriptions`  
+   • Deduplicate previously-saved postings
+2. **University Portal Application Agent**  
+   • Navigate to posting  
+   • Upload AI-generated resume + cover letter  
+   • Expose progress/events over API to UI
+3. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
+   • Replace Streamlit dashboard  
+   • Provide OAuth-protected REST/WS endpoints  
+   • Real-time PDF preview via WebSockets
+4. **External Integrations**  
+   • LinkedIn / Indeed Scraper  
+   • Generic website apply-bot w/ form autofill
+5. **Quality-of-Life**  
+   • LLM-powered web search to enrich project bullet points  
+   • Cloud deployment scripts (Docker + CI/CD)
+
+---
+
+## Repository Structure
+```
+├── CV_Agent/           # Streamlit MVP for resume & cover-letters
+│   ├── core/           # Business logic (parsing, Gemini calls, etc.)
+│   └── tests/          # Pytest suite for CV_Agent
+├── Job_Scraper/        # (WIP) University job-board crawler
+├── .github/            # CI workflows (future)
+├── requirements.txt    # Python dependencies for all modules
+└── README.md           # You are here
+```
+
+---
 
 ## Tech Stack
+* **Python 3.11**  
+* **LangGraph, LangChain, Vertex AI Gemini** – language generation & orchestration  
+* **Streamlit** – current MVP UI  
+* **React + Vite (planned)** – next-gen dashboard  
+* **FastAPI / Django (planned)** – REST & WebSocket back-end  
 
-- **Framework**: Streamlit for web interface
-- **AI/ML**: LangChain, LangGraph, Google Gemini 2.0 Flash
-- **Document Processing**: PyPDF, python-docx, docx2pdf
-- **Vector Store**: FAISS for RAG retrieval
-- **Environment**: python-dotenv for configuration
+---
 
-## Setup & Installation
-
-### Prerequisites
-
-- Python 3.8+
-- Google Gemini API key
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd LangGraph-AI-Application-Agent-Gemini
-   ```
-
-2. **Create virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure API Key**
-   Create a `.env` file in the project root:
-   ```
-   GOOGLE_API_KEY=your_google_gemini_api_key_here
-   ```
-
-5. **Run the application**
-   ```bash
-   streamlit run main_app.py
-   ```
-
-## Usage
-
-### 1. Document Upload
-- Upload your master resume (PDF format)
-- Upload the target job description (PDF format)
-
-### 2. Resume Studio
-- AI automatically selects relevant projects and generates tailored content
-- Review and edit the generated professional summary
-- Modify project descriptions with real-time regeneration
-- Handle length optimization if resume exceeds recommended limits
-
-### 3. Cover Letter Studio  
-- Review AI-generated introduction and conclusion
-- Edit and regenerate cover letter body paragraphs
-- Provide feedback for content refinement
-
-### 4. Download & Finalize
-- Download professional PDF documents
-- Both resume and cover letter are formatted and ready for submission
-
-## Project Structure
-
-```
-├── core/
-│   ├── agents.py          # AI agent implementations
-│   ├── graph.py           # LangGraph workflow definition  
-│   ├── ingestion.py       # PDF parsing and text extraction
-│   ├── rag_setup.py       # Vector store and retrieval setup
-│   └── doc_generator.py   # PDF generation from templates
-├── tests/                 # Comprehensive test suite
-├── main_app.py           # Streamlit application entry point
-├── requirements.txt      # Python dependencies
-└── README.md            # Project documentation
-```
-
-## Testing
-
-Run the test suite to ensure everything is working correctly:
-
+## Quick Start
+1. **Clone & enter repo**
 ```bash
-pytest tests/
+git clone <YOUR_FORK_URL>
+cd LangGraph-AI-Application-Agent-Gemini
 ```
+2. **Create & activate venv**
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
+```
+3. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
+4. **Run the CV Agent MVP**
+```bash
+cd CV_Agent
+streamlit run main_app.py
+```
+Detailed instructions, template setup, and environment variables are covered in `CV_Agent/README.md`.
 
-The project includes comprehensive tests covering:
-- Document ingestion and parsing
-- AI agent functionality
-- Graph workflow execution
-- PDF generation
-- Integration testing
+---
 
-## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GOOGLE_API_KEY` | Google Gemini API key for AI operations | Yes |
 
-## Important Notes
 
-- **Rate Limiting**: Built-in rate limiter respects Google Gemini API limits (15 RPM)
-- **Templates Required**: Ensure you have proper DOCX templates for resume and cover letter formatting
-- **Virtual Environment**: Always use the project's virtual environment for dependency isolation
-
-## Contributing
-
-This project follows structured development practices:
-- Incremental feature development with planning
-- Comprehensive testing after each module
-- Clean, documented code with type hints
-- PEP 8 compliance and professional naming conventions
