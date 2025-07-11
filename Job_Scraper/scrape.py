@@ -9,22 +9,24 @@ import asyncio
 
 dotenv.load_dotenv()
 
-TMU_USERNAME = os.getenv("TMU_USERNAME")
-TMU_PASSWORD = os.getenv("TMU_PASSWORD")
+username = os.getenv("username")
+password = os.getenv("password")
+url = os.getenv("url")
 
 
 def start_scraper():
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    TMU_USERNAME = os.getenv('TMU_USERNAME')
-    TMU_PASSWORD = os.getenv('TMU_PASSWORD')
+    username = os.getenv('username')
+    password = os.getenv('password')
+    url = os.getenv('url')
     st.session_state.status = 'Launching browser...'
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
         st.session_state.status = 'Navigating to login...'
-        page.goto('https://cas.torontomu.ca/login?service=https%3A%2F%2Frecruitstudents.torontomu.ca%2FcasLogin.htm%3Faction%3Dlogin')
-        page.get_by_role('textbox', name='torontomu username').fill(TMU_USERNAME)
-        page.get_by_role('textbox', name='Password').fill(TMU_PASSWORD)
+        page.goto(url)
+        page.get_by_role('textbox', name='torontomu username').fill(username)
+        page.get_by_role('textbox', name='Password').fill(password)
         page.get_by_role('button', name='Log in').click()
         st.session_state.status = 'Waiting for 2FA page...'
         page.get_by_role('textbox', name='Verification Code:').wait_for(state='visible', timeout=60000) # Reverted to more robust locator and increased timeout
