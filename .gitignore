@@ -198,3 +198,5 @@ cython_debug/
 /.env
 /Input-Documents
 /Templates
+jobs/
+Portal_Application/

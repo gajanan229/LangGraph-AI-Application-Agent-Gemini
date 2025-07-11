@@ -11,8 +11,9 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 | Area | Module / Folder | Status |
 |------|-----------------|--------|
 | Resume & Cover-letter generation | `CV_Agent/` | **✅  Complete** – fully-functional Streamlit MVP generates tailored PDFs.  See `CV_Agent/README.md` for details. |
-| University job-board scraper | `Job_Scraper/` | 🛠  In progress |
-| University portal auto-apply agent | _planned_ | ⏳ Not started |
+| University job-board scraper | `Job_Scraper/` | **✅ Complete** |
+| University portal auto-apply agent | _planned_ | 🛠  In progress |
+| Integration of Scraper & Application Agent | _planned_ | ⏳ Not started |
 | External job-board auto-apply agent | _planned_ | ⏳ Not started |
 | External job-board scraper | _optional_ | ⏳ Not started |
 | React + FastAPI full-stack UI | _planned_ | ⏳ Not started |
@@ -21,22 +22,23 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 ---
 
 ## Roadmap
-1. **Finish Job_Scraper**  
-   • Log-in to university career portal  
-   • Persist new postings to `Input-Documents/Job-Descriptions`  
-   • Deduplicate previously-saved postings
-2. **University Portal Application Agent**  
+1. **University Portal Application Agent**  
    • Navigate to posting  
    • Upload AI-generated resume + cover letter  
    • Expose progress/events over API to UI
-3. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
+2. **Integration Stage**
+   • Combine completed steps into a unified workflow
+   • Ensure smooth data flow between scraper and application agent
+3. **External Job-Board Auto-Apply Agent**
+   • Implement automated application submission for external job boards
+   • Handle diverse application forms and flows
+4. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
    • Replace Streamlit dashboard  
    • Provide OAuth-protected REST/WS endpoints  
    • Real-time PDF preview via WebSockets
-4. **External Integrations**  
+5. **External Integrations**  
    • LinkedIn / Indeed Scraper  
-   • Generic website apply-bot w/ form autofill
-5. **Quality-of-Life**  
+6. **Quality-of-Life**  
    • LLM-powered web search to enrich project bullet points  
    • Cloud deployment scripts (Docker + CI/CD)
 
@@ -47,7 +49,8 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 ├── CV_Agent/           # Streamlit MVP for resume & cover-letters
 │   ├── core/           # Business logic (parsing, Gemini calls, etc.)
 │   └── tests/          # Pytest suite for CV_Agent
-├── Job_Scraper/        # (WIP) University job-board crawler
+├── Job_Scraper/        # University job-board scraper (frontend and backend)
+├── jobs/               # Scraped job details and IDs
 ├── .github/            # CI workflows (future)
 ├── requirements.txt    # Python dependencies for all modules
 └── README.md           # You are here
