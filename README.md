@@ -12,7 +12,8 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 |------|-----------------|--------|
 | Resume & Cover-letter generation | `CV_Agent/` | **✅  Complete** – fully-functional Streamlit MVP generates tailored PDFs.  See `CV_Agent/README.md` for details. |
 | University job-board scraper | `Job_Scraper/` | **✅ Complete** |
-| University portal auto-apply agent | _planned_ | 🛠  In progress |
+| University portal auto-apply agent | `Portal_Application/` | **✅ Complete** |
+| Prompt engineering & Resume/Cover-letter update | _planned_ | 🛠  In progress |
 | Integration of Scraper & Application Agent | _planned_ | ⏳ Not started |
 | External job-board auto-apply agent | _planned_ | ⏳ Not started |
 | External job-board scraper | _optional_ | ⏳ Not started |
@@ -26,19 +27,23 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
    • Navigate to posting  
    • Upload AI-generated resume + cover letter  
    • Expose progress/events over API to UI
-2. **Integration Stage**
+2. **Prompt Engineering & Resume/Cover-letter Generation Update**
+   • Improve prompt templates for better AI output
+   • Enhance resume and cover letter generation logic
+   • Integrate user feedback for document quality
+3. **Integration Stage**
    • Combine completed steps into a unified workflow
    • Ensure smooth data flow between scraper and application agent
-3. **External Job-Board Auto-Apply Agent**
+4. **External Job-Board Auto-Apply Agent**
    • Implement automated application submission for external job boards
    • Handle diverse application forms and flows
-4. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
+5. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
    • Replace Streamlit dashboard  
    • Provide OAuth-protected REST/WS endpoints  
    • Real-time PDF preview via WebSockets
-5. **External Integrations**  
+6. **External Integrations**  
    • LinkedIn / Indeed Scraper  
-6. **Quality-of-Life**  
+7. **Quality-of-Life**  
    • LLM-powered web search to enrich project bullet points  
    • Cloud deployment scripts (Docker + CI/CD)
 

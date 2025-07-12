@@ -9,14 +9,14 @@ import asyncio
 
 dotenv.load_dotenv()
 
-username = os.getenv("username")
+username = os.getenv("TMU_USERNAME")
 password = os.getenv("password")
 url = os.getenv("url")
 
 
 def start_scraper():
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    username = os.getenv('username')
+    username = os.getenv('TMU_USERNAME')
     password = os.getenv('password')
     url = os.getenv('url')
     st.session_state.status = 'Launching browser...'
