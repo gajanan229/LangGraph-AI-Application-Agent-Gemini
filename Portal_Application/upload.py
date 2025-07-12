@@ -12,12 +12,14 @@ dotenv.load_dotenv()
 TMU_USERNAME = os.getenv("TMU_USERNAME")
 TMU_PASSWORD = os.getenv("password")
 url = os.getenv("url")
+file_path = os.getenv("INPUT_FILES")
 
 def start_uploader():
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     TMU_USERNAME = os.getenv('TMU_USERNAME')
     TMU_PASSWORD = os.getenv('password')
     url = os.getenv('url')
+    file_path = os.getenv('file_path')
     st.session_state.status = 'Launching browser...'
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
@@ -47,7 +49,7 @@ def start_uploader():
         page.get_by_role("textbox", name="Name").fill("resume_test")
         page.get_by_label("Type").select_option("2")  
         time.sleep(1)
-        page.locator('input[type="file"]').set_input_files("C:/Users/Gajanan Vigneswaran/Downloads/Gajanan_Vig_Resume_AI.pdf")
+        page.locator('input[type="file"]').set_input_files(file_path)
         time.sleep(3)
         page.locator('#submitFileUploadFormBtn').click()
         st.session_state.status = 'Resume uploaded. Uploading cover letter...'
@@ -57,7 +59,7 @@ def start_uploader():
         page.get_by_role("textbox", name="Name").fill("cover letter_test")
         page.get_by_label("Type").select_option("1")
         time.sleep(1)
-        page.locator('input[type="file"]').set_input_files("C:/Users/Gajanan Vigneswaran/Downloads/Gajanan_Vig_Resume_AI.pdf")
+        page.locator('input[type="file"]').set_input_files(file_path)
         time.sleep(3)
         page.locator('#submitFileUploadFormBtn').click()
         st.session_state.status = 'Uploads complete.'
