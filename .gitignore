@@ -199,3 +199,4 @@ cython_debug/
 /Input-Documents
 /Templates
 jobs/
+*plan.md

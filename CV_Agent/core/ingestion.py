@@ -4,9 +4,20 @@ from typing import Any, Dict, List
 
 import pypdf
 
+def parse_text(file_bytes: bytes) -> str:
+    """Reads the byte content of a text file and decodes it.
+
+    Args:
+        file_bytes: The byte content of the text file.
+
+    Returns:
+        A single string containing the file's full text.
+    """
+    return file_bytes.decode('utf-8', errors='ignore')
+
 
 def parse_pdf(file_bytes: bytes) -> str:
-    """Extracts text from a PDF file's bytes.
+    """Extracts text from a PDF file's bytes. 
 
     Args:
         file_bytes: The byte content of the PDF file.
@@ -43,7 +54,8 @@ def _parse_projects_section(project_text: str) -> List[Dict[str, str]]:
         "RESTful Blog API & Client with Authentication",
         "Notes App with the PERN stack",
         "Portfolio Blog with AI Chatbot Integration, gajanan.live",
-        "AI-Powered Resume & Cover Letter Generator"
+        "AI-Powered Resume & Cover Letter Generator",
+        "VeriFYP: AI-Powered TikTok Fact-Checking System"
     ]
     
     # Split the text based on project titles

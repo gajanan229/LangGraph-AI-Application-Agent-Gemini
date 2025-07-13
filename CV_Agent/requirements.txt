@@ -9,3 +9,4 @@ python-docx
 docx2pdf
 faiss-cpu
 python-dotenv 
+langchain_deepseek

@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import base64
-from core.ingestion import parse_master_resume, parse_pdf
+from core.ingestion import parse_master_resume, parse_pdf, parse_text
 from core.rag_setup import setup_rag_pipeline
 from core.graph import create_application_graph, GraphState
 from core.doc_generator import create_resume_pdf, create_cover_letter_pdf
@@ -14,7 +14,7 @@ def get_app_graph():
     """Builds and caches the LangGraph application."""
     return create_application_graph()
 
-# --- Utility Functions ---
+# --- Utility Functions ---  
 def display_pdf_preview(pdf_bytes, height=600):
     """Displays a PDF in an iframe."""
     base64_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
@@ -59,6 +59,9 @@ default_keys = {
     "cl_feedback_history": [],
     "final_resume_pdf": None,
     "final_cover_letter_pdf": None,
+    "cl_stage": "intro_concl",
+    "user_feedback_intro_concl": "",
+    "user_feedback_body": "",
 }
 for key, value in default_keys.items():
     if key not in st.session_state:
@@ -116,16 +119,18 @@ if st.session_state.ui_stage == "upload":
         if IS_DEV_MODE and not st.session_state.structured_resume:
             st.info("🔧 Dev Mode: Loading sample job description.")
             try:
-                jd_path = os.path.join("Input-Documents", "job description.pdf")
+                jd_path = os.path.join("..", "jobs", "Dayforce (Ceridian)_96417", "AI Transformation Engineer Intern 4 or 8 months (Fall 2025) - Req #22001_job_details.txt")
                 with open(jd_path, "rb") as f:
                     st.session_state.uploaded_jd_bytes = f.read()
+                    st.session_state.uploaded_jd_path = jd_path # Store the path
                 st.success("Sample job description loaded!")
             except FileNotFoundError:
                 st.error(f"Sample JD not found at '{jd_path}'.")
         else:
-            uploaded_jd = st.file_uploader("Upload Job Description (PDF)", type=["pdf"], key="jd_upload")
+            uploaded_jd = st.file_uploader("Upload Job Description (PDF or TXT)", type=["pdf", "txt"], key="jd_upload")
             if uploaded_jd:
                 st.session_state.uploaded_jd_bytes = uploaded_jd.getvalue()
+                st.session_state.uploaded_jd_path = uploaded_jd.name # Store the path
                 st.success("Job description uploaded!")
 
     if st.session_state.uploaded_resume_bytes and st.session_state.uploaded_jd_bytes:
@@ -140,7 +145,13 @@ if st.session_state.ui_stage == "upload":
                     # Parse documents
                     resume_text = parse_pdf(st.session_state.uploaded_resume_bytes)
                     st.session_state.structured_resume = parse_master_resume(resume_text)
-                    st.session_state.job_description_text = parse_pdf(st.session_state.uploaded_jd_bytes)
+                    
+                    # Determine whether to use parse_pdf or parse_text for job description
+                    jd_filename = os.path.basename(st.session_state.uploaded_jd_path) if st.session_state.uploaded_jd_path else ""
+                    if jd_filename.lower().endswith(".txt"):
+                        st.session_state.job_description_text = parse_text(st.session_state.uploaded_jd_bytes)
+                    else:
+                        st.session_state.job_description_text = parse_pdf(st.session_state.uploaded_jd_bytes)
                     
                     # Build RAG pipeline
                     st.session_state.rag_retrievers = setup_rag_pipeline(st.session_state.structured_resume)
@@ -296,20 +307,17 @@ elif st.session_state.ui_stage == "resume_studio":
                 if not st.session_state.graph_state.get("resume_is_too_long", False):
                     # The button now just sets the state and re-invokes to trigger CL generation
                     if st.button("➡️ Proceed to Cover Letter", type="primary", use_container_width=True):
-                        with st.spinner("Generating cover letter..."):
+                        with st.spinner("Generating intro and conclusion..."):
                             current_state = st.session_state.graph_state
-                            # Set the action that the graph's router is waiting for
                             current_state['user_action'] = "PROCEED_TO_CL"
                             
                             app = get_app_graph()
                             final_state = app.invoke(current_state)
 
-                            # Update the entire state
                             st.session_state.graph_state = final_state
                             st.session_state.generated_cl_intro = final_state.get("generated_cl_intro", "")
-                            st.session_state.generated_cl_body = final_state.get("generated_cl_body", "")
                             st.session_state.generated_cl_conclusion = final_state.get("generated_cl_conclusion", "")
-                            st.session_state.cover_letter_generated = True
+                            st.session_state.cl_stage = "intro_concl"
                         
                         st.session_state.ui_stage = "cover_letter_studio"
                         st.rerun()
@@ -347,91 +355,78 @@ elif st.session_state.ui_stage == "cover_letter_studio":
     
     col1, col2 = st.columns([0.4, 0.6])
     
-    with col1:
-        st.subheader("✍️ Cover Letter Sections")
-        
-        # Editable cover letter sections
-        st.session_state.generated_cl_intro = st.text_area(
-            "Introduction", 
-            st.session_state.generated_cl_intro, 
-            height=100,
-            help="Opening paragraph that grabs attention"
-        )
-        
-        st.session_state.generated_cl_body = st.text_area(
-            "Body Paragraphs", 
-            st.session_state.generated_cl_body, 
-            height=200,
-            help="Main content connecting your experience to the role"
-        )
-        
-        st.session_state.generated_cl_conclusion = st.text_area(
-            "Conclusion", 
-            st.session_state.generated_cl_conclusion, 
-            height=100,
-            help="Strong closing with call to action"
-        )
-        
-        # Feedback and regeneration
-        st.subheader("🔄 Regeneration Options")
-        feedback_text = st.text_area(
-            "Feedback for AI (Optional)", 
-            placeholder="e.g., 'Make it more technical', 'Focus on leadership experience', 'Add more enthusiasm'",
-            height=80
-        )
-        
-        # Action buttons
-        col1_1, col1_2 = st.columns(2)
-        with col1_1:
-            if st.button("🔄 Update Preview"):
-                st.rerun()
-            if st.button("🤖 Regenerate with Feedback") and feedback_text.strip():
-                with st.spinner("🤖 Regenerating cover letter..."):
-                    # Add feedback to history
-                    st.session_state.cl_feedback_history.append(feedback_text.strip())
-                    
-                    # Create new state for regeneration
-                    app = get_app_graph()
-                    regen_state: GraphState = {
-                        "job_description_text": st.session_state.job_description_text,
-                        "master_resume_structured": st.session_state.structured_resume,
-                        "rag_retrievers": st.session_state.rag_retrievers,
-                        "selected_project_titles": list(st.session_state.generated_projects.keys()),
-                        "generated_resume_summary": st.session_state.generated_summary,
-                        "generated_resume_projects": st.session_state.generated_projects,
-                        "generated_cl_intro": st.session_state.generated_cl_intro,
-                        "generated_cl_conclusion": st.session_state.generated_cl_conclusion,
-                        "generated_cl_body": st.session_state.generated_cl_body,
-                        "cl_feedback_history": st.session_state.cl_feedback_history,
-                        "user_action": "REGENERATE_CL",
-                    }
-                    
-                    # In regeneration, we also need to pass the full state
-                    final_state = app.invoke({**st.session_state.graph_state, **regen_state})
-                    
-                    # Update with regenerated content
-                    st.session_state.graph_state = final_state
-                    st.session_state.generated_cl_intro = final_state.get("generated_cl_intro", "")
-                    st.session_state.generated_cl_body = final_state.get("generated_cl_body", "")
-                    st.session_state.generated_cl_conclusion = final_state.get("generated_cl_conclusion", "")
-                st.rerun()
-        
-        with col1_2:
-            if st.button("✅ Finalize Documents", type="primary"):
-                st.session_state.ui_stage = "finalization"
-                st.rerun()
-
-    with col2:
-        st.subheader("📄 Live Cover Letter Preview")
-        with st.spinner("📄 Generating cover letter preview..."):
-            st.session_state.final_cover_letter_pdf = create_cover_letter_pdf(
-                template_path="Templates/cover_letter_template.docx",
-                intro=st.session_state.generated_cl_intro,
-                body=st.session_state.generated_cl_body,
-                conclusion=st.session_state.generated_cl_conclusion,
-            )
+    if st.session_state.cl_stage == "intro_concl":
+        with col1:
+            st.subheader("✍️ Intro & Conclusion")
+            st.session_state.generated_cl_intro = st.text_area("Introduction", st.session_state.generated_cl_intro, height=100)
+            st.session_state.generated_cl_conclusion = st.text_area("Conclusion", st.session_state.generated_cl_conclusion, height=100)
             
-            display_pdf_preview(st.session_state.final_cover_letter_pdf, height=700)
+            feedback = st.text_area("Feedback for Regeneration", height=80)
+            
+            col1_1, col1_2 = st.columns(2)
+            with col1_1:
+                if st.button("🔄 Regenerate"):
+                    with st.spinner("Regenerating..."):
+                        current_state = st.session_state.graph_state
+                        current_state['user_feedback_intro_concl'] = feedback
+                        current_state['user_action'] = "REGENERATE_IC"
+                        app = get_app_graph()
+                        final_state = app.invoke(current_state)
+                        st.session_state.graph_state = final_state
+                        st.session_state.generated_cl_intro = final_state.get("generated_cl_intro", "")
+                        st.session_state.generated_cl_conclusion = final_state.get("generated_cl_conclusion", "")
+                    st.rerun()
+            with col1_2:
+                if st.button("➡️ Proceed to Body", type="primary"):
+                    with st.spinner("Generating body..."):
+                        current_state = st.session_state.graph_state
+                        current_state['user_action'] = "PROCEED_TO_BODY"
+                        app = get_app_graph()
+                        final_state = app.invoke(current_state)
+                        st.session_state.graph_state = final_state
+                        st.session_state.generated_cl_body = final_state.get("generated_cl_body", "")
+                        st.session_state.cl_stage = "body"
+                    st.rerun()
+        
+        with col2:
+            st.subheader("📄 Preview")
+            with st.spinner("Generating preview..."):
+                preview_pdf = create_cover_letter_pdf("Templates/cover_letter_template.docx", st.session_state.generated_cl_intro, "[Body Placeholder]", st.session_state.generated_cl_conclusion)
+                display_pdf_preview(preview_pdf, height=700)
+    
+    elif st.session_state.cl_stage == "body":
+        with col1:
+            st.subheader("✍️ Full Cover Letter")
+            st.text_area("Introduction (read-only)", st.session_state.generated_cl_intro, height=100, disabled=True)
+            st.session_state.generated_cl_body = st.text_area("Body", st.session_state.generated_cl_body, height=200)
+            st.text_area("Conclusion (read-only)", st.session_state.generated_cl_conclusion, height=100, disabled=True)
+            
+            feedback = st.text_area("Feedback for Body Regeneration", height=80)
+            
+            col1_1, col1_2 = st.columns(2)
+            with col1_1:
+                if st.button("🔄 Regenerate Body"):
+                    with st.spinner("Regenerating body..."):
+                        current_state = st.session_state.graph_state
+                        current_state['user_feedback_body'] = feedback
+                        current_state['user_action'] = "REGENERATE_BODY"
+                        app = get_app_graph()
+                        final_state = app.invoke(current_state)
+                        st.session_state.graph_state = final_state
+                        st.session_state.generated_cl_body = final_state.get("generated_cl_body", "")
+                        # Display length
+                        st.info(f"Total lines: {final_state.get('cl_line_count', 'N/A')}")
+                    st.rerun()
+            with col1_2:
+                if st.button("✅ Finalize", type="primary"):
+                    st.session_state.ui_stage = "finalization"
+                    st.rerun()
+        
+        with col2:
+            st.subheader("📄 Full Preview")
+            with st.spinner("Generating preview..."):
+                full_pdf = create_cover_letter_pdf("Templates/cover_letter_template.docx", st.session_state.generated_cl_intro, st.session_state.generated_cl_body, st.session_state.generated_cl_conclusion)
+                display_pdf_preview(full_pdf, height=700)
 
 # --- STAGE 4: FINALIZATION ---
 elif st.session_state.ui_stage == "finalization":

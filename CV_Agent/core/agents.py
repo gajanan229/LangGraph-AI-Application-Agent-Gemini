@@ -202,13 +202,15 @@ def rewrite_projects(state: "GraphState") -> Dict[str, Any]:
             {original_project['description']}
         """
         # print(prompt)
+        print(original_project['description'])
         structured_llm = llm.with_structured_output(ResumeSection)
         response = invoke_llm_with_rate_limiting(structured_llm, prompt)
+        print(response.rewritten_text)
         rewritten_projects[title] = response.rewritten_text
 
-    return {"generated_resume_projects": rewritten_projects}
+    return {"generated_resume_projects": rewritten_projects} 
 
-# --- Placeholder agents for Cover Letter (to be fully implemented later) ---
+# --- Placeholder agents for Cover Letter (to be fully implemented later) --- 
 
 def generate_cl_intro_conclusion(state: "GraphState") -> Dict[str, Any]:
     """Generates the introduction and conclusion for the cover letter."""
@@ -287,7 +289,7 @@ def generate_cl_body(state: "GraphState") -> Dict[str, Any]:
     5. The body paragraphs should flow well from one to the next, including the transition from the introduction and to the conclusion.
     6. If the candidate doesnt have some of the skills mentioned in the job description, make connections to other skills/experiences, or explain that they are eager to learn.
     7. Dont be too technical, repetitive, or boring. explain what was done, why it was done, and what i learned, dont be too stuck up on the technical details.
-    8. be creative and think outside the box, engaging the reader.
+    8. be creative and think outside the box, engaging the reader.  
 
     Each paragraph should be 3-5 sentences. Make it personal, specific, and compelling. Do not have all the paragraphs be the same length.
     Do not use an em dash in any paragraph.
@@ -472,6 +474,6 @@ def shorten_resume(state: "GraphState") -> Dict[str, Any]:
         
         print(f"  - Shortening project by removing one line from: {longest_project_title}")
         projects[longest_project_title] = response.rewritten_text
-        return {"generated_resume_projects": projects}
+        return {"generated_resume_projects": projects} 
 
     return {} # Should not be reached in normal flow 

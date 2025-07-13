@@ -104,10 +104,11 @@ def _create_project_bullet(doc: DocxDocument, bullet_text: str, insert_before: P
     
     # Set bullet list style first
     try:
-        new_para.style = 'List Bullet'
+        new_para.style = 'List Paragraph'
     except Exception:
         # Fallback if 'List Bullet' style doesn't exist. Prepend bullet manually.
-        bullet_text = f"• {bullet_text}"
+        print("List Bullet style doesn't exist. Prepending bullet manually.")
+        bullet_text = f"• {bullet_text}" 
 
     # Now add the formatted text
     _add_formatted_text_to_paragraph(new_para, bullet_text)
@@ -169,7 +170,7 @@ def create_resume_pdf(
             _delete_paragraph(insertion_point)
 
     # 4. Save and Convert to PDF
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
         docx_path = os.path.join(tmpdir, "final_resume.docx")
         pdf_path = os.path.join(tmpdir, "final_resume.pdf")
         doc.save(docx_path)

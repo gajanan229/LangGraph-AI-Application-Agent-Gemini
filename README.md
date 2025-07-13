@@ -10,10 +10,11 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 ## Current Status
 | Area | Module / Folder | Status |
 |------|-----------------|--------|
-| Resume & Cover-letter generation | `CV_Agent/` | **✅  Complete** – fully-functional Streamlit MVP generates tailored PDFs.  See `CV_Agent/README.md` for details. |
+| Resume & Cover-letter generation | `CV_Agent/` | **✅  Legacy** – fully-functional Streamlit MVP generates tailored PDFs. See `CV_Agent/README.md` for details. |
 | University job-board scraper | `Job_Scraper/` | **✅ Complete** |
 | University portal auto-apply agent | `Portal_Application/` | **✅ Complete** |
-| Prompt engineering & Resume/Cover-letter update | _planned_ | 🛠  In progress |
+| Prompt engineering & Resume/Cover-letter update | _planned_ | **✅ Almost Complete** |
+| Resume & Cover-letter generation rewrite/refactor | _planned_ | ⏳ Not started |
 | Integration of Scraper & Application Agent | _planned_ | ⏳ Not started |
 | External job-board auto-apply agent | _planned_ | ⏳ Not started |
 | External job-board scraper | _optional_ | ⏳ Not started |
@@ -28,22 +29,26 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
    • Upload AI-generated resume + cover letter  
    • Expose progress/events over API to UI
 2. **Prompt Engineering & Resume/Cover-letter Generation Update**
-   • Improve prompt templates for better AI output
-   • Enhance resume and cover letter generation logic
-   • Integrate user feedback for document quality
-3. **Integration Stage**
+   • Improved prompt templates for better AI output
+   • Enhanced resume and cover letter generation logic
+   • Integrated user feedback for document quality
+3. **Resume & Cover-letter Generation Rewrite/Refactor**
+   • Refactor existing resume and cover letter generation for improved modularity and maintainability.
+   • Implement new advanced AI models and techniques for generation.
+   • Ensure seamless integration with the updated LangGraph workflow.
+4. **Integration Stage**
    • Combine completed steps into a unified workflow
    • Ensure smooth data flow between scraper and application agent
-4. **External Job-Board Auto-Apply Agent**
+5. **External Job-Board Auto-Apply Agent**
    • Implement automated application submission for external job boards
    • Handle diverse application forms and flows
-5. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
+6. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
    • Replace Streamlit dashboard  
    • Provide OAuth-protected REST/WS endpoints  
    • Real-time PDF preview via WebSockets
-6. **External Integrations**  
+7. **External Integrations**  
    • LinkedIn / Indeed Scraper  
-7. **Quality-of-Life**  
+8. **Quality-of-Life**  
    • LLM-powered web search to enrich project bullet points  
    • Cloud deployment scripts (Docker + CI/CD)
 
