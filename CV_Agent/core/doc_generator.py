@@ -51,11 +51,27 @@ def _replace_text_in_paragraph(p: Paragraph, placeholder: str, value: str):
     """
     Replaces placeholder text in a paragraph while preserving formatting.
     Assumes the placeholder exists entirely within a single run.
+    Ensures Times New Roman size 11 font is applied.
     """
     for run in p.runs:
         if placeholder in run.text:
             run.text = run.text.replace(placeholder, value)
+            # Ensure consistent font formatting
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(11)
             break  # Assume placeholder appears only once per paragraph
+
+
+def _ensure_cover_letter_font_formatting(doc: DocxDocument):
+    """
+    Ensures all paragraphs in the cover letter use Times New Roman size 11.
+    This is a fallback to maintain consistent formatting.
+    """
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+            if run.font.name != 'Times New Roman' or run.font.size != Pt(11):
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(11)
 
 
 def _find_projects_insertion_point(doc: DocxDocument) -> Optional[Paragraph]:
@@ -211,12 +227,16 @@ def create_cover_letter_pdf(
         conclusion_anchor.paragraph_format.space_before = Pt(0)
         conclusion_anchor.paragraph_format.space_after = Pt(6)
 
-    # --- Process Body ---
-    if body_anchor:
+    # --- Process Body (only if body content is provided) ---
+    if body_anchor and body and body.strip():  # Only process if body has actual content
         body_lines = [line.strip() for line in body.split('\n') if line.strip()]
         if body_lines:
             # Replace the anchor paragraph's text with the first line.
             body_anchor.text = body_lines[0]
+            # Ensure font formatting for the body anchor
+            for run in body_anchor.runs:
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(11)
             body_anchor.paragraph_format.space_before = Pt(0)
             body_anchor.paragraph_format.space_after = Pt(6)
 
@@ -234,17 +254,26 @@ def create_cover_letter_pdf(
                 for line in reversed(body_lines[1:]):
                     new_para = reference_paragraph.insert_paragraph_before(line)
                     new_para.style = body_anchor.style
+                    # Ensure font formatting for new paragraphs
+                    for run in new_para.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(11)
                     new_para.paragraph_format.space_before = Pt(0)
                     new_para.paragraph_format.space_after = Pt(6)
             elif len(body_lines) > 1:
                 # Fallback if [BODY] is the last thing in the document.
                 for line in body_lines[1:]:
                     new_para = doc.add_paragraph(line, style=body_anchor.style)
+                    # Ensure font formatting for new paragraphs
+                    for run in new_para.runs:
+                        run.font.name = 'Times New Roman'
+                        run.font.size = Pt(11)
                     new_para.paragraph_format.space_before = Pt(0)
                     new_para.paragraph_format.space_after = Pt(6)
-        else:
-            # If body is empty, remove the placeholder paragraph.
-            _delete_paragraph(body_anchor)
+    # If body is empty or None, leave the [BODY] placeholder untouched to preserve formatting
+
+    # --- Apply font formatting fallback to entire document ---
+    _ensure_cover_letter_font_formatting(doc)
 
     # Save and Convert to PDF
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -87,7 +87,7 @@ class OptimizedProject(BaseModel):
 
 # --- LLM Initialization ---
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash-lite-preview-06-17",
     temperature=0.3,
     model_kwargs={"response_format": {"type": "json_object"}},
 )
@@ -186,7 +186,7 @@ def adjust_projects_for_length(state: "GraphState") -> Dict[str, Any]:
     max_iterations = 8
     # Create a new LLM instance with a lower temperature for shortening
     llm_shorten_temp = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite-preview-06-17",
         temperature=0.1,  # Low temperature for precise shortening
         model_kwargs={"response_format": {"type": "json_object"}}, 
     )
