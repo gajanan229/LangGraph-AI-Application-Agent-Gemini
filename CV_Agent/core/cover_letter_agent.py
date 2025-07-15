@@ -262,7 +262,7 @@ def edit_intro_conclusion(state: "GraphState") -> Dict[str, Any]:
     }
 
 def generate_body(state: "GraphState") -> Dict[str, Any]:
-    print("---AGENT: Generating cover letter body---")
+    print("---AGENT: Generating cover letter body 2---")
     jd_text = state["job_description_text"]
     structured_resume = state["master_resume_structured"]
     selected_projects = state["generated_resume_projects"]
@@ -337,6 +337,8 @@ def generate_body(state: "GraphState") -> Dict[str, Any]:
 
         Remember: The body should reveal who you are as a person and teammate, not just what you've built. Show your personality, working style, and values through your experiences.
 
+        the introduction and conclusion have already been written. **only write the body paragraphs**, **do not** include the introduction, conclusion, or any other text.
+
         JOB DESCRIPTION:
         {jd_text}
 
@@ -351,6 +353,7 @@ def generate_body(state: "GraphState") -> Dict[str, Any]:
     
     structured_llm = gemini.with_structured_output(CoverLetterBody)
     response = invoke_llm_with_rate_limiting(structured_llm, prompt)
+    print(f"  - Generated body paragraphs: {response.body_paragraphs}")
     return {"generated_cl_body": response.body_paragraphs}
 
 def adjust_body_length(state: "GraphState") -> Dict[str, Any]:

@@ -11,10 +11,11 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 | Area | Module / Folder | Status |
 |------|-----------------|--------|
 | Resume & Cover-letter generation | `CV_Agent/` | **✅  Legacy** – fully-functional Streamlit MVP generates tailored PDFs. See `CV_Agent/README.md` for details. |
-| University job-board scraper | `Job_Scraper/` | **✅ Complete** |
+| University job-board scraper (shortlist) | `Job_Scraper_shortlist/` | **✅ Complete** |
 | University portal auto-apply agent | `Portal_Application/` | **✅ Complete** |
-| Prompt engineering & Resume/Cover-letter update | _planned_ | **✅ Almost Complete** |
-| Resume & Cover-letter generation rewrite/refactor | _planned_ | ⏳ Not started |
+| Prompt engineering & Resume/Cover-letter update | `CV_Agent/core/` | **✅ Complete** – Enhanced prompts, improved AI output quality, refined document generation |
+| Resume & Cover-letter generation rewrite/refactor | _planned_ | **In Progress** |
+| University job-board scraper (full) | `Job_Scraper_full/` | **In Progress** |
 | Integration of Scraper & Application Agent | _planned_ | ⏳ Not started |
 | External job-board auto-apply agent | _planned_ | ⏳ Not started |
 | External job-board scraper | _optional_ | ⏳ Not started |
@@ -24,31 +25,23 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 ---
 
 ## Roadmap
-1. **University Portal Application Agent**  
-   • Navigate to posting  
-   • Upload AI-generated resume + cover letter  
-   • Expose progress/events over API to UI
-2. **Prompt Engineering & Resume/Cover-letter Generation Update**
-   • Improved prompt templates for better AI output
-   • Enhanced resume and cover letter generation logic
-   • Integrated user feedback for document quality
-3. **Resume & Cover-letter Generation Rewrite/Refactor**
+1. **Resume & Cover-letter Generation Rewrite/Refactor**
    • Refactor existing resume and cover letter generation for improved modularity and maintainability.
    • Implement new advanced AI models and techniques for generation.
    • Ensure seamless integration with the updated LangGraph workflow.
-4. **Integration Stage**
+2. **Integration Stage**
    • Combine completed steps into a unified workflow
    • Ensure smooth data flow between scraper and application agent
-5. **External Job-Board Auto-Apply Agent**
+3. **External Job-Board Auto-Apply Agent**
    • Implement automated application submission for external job boards
    • Handle diverse application forms and flows
-6. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
+4. **Front-end Rewrite** (React) & **Back-end API** (FastAPI or Django)  
    • Replace Streamlit dashboard  
    • Provide OAuth-protected REST/WS endpoints  
    • Real-time PDF preview via WebSockets
-7. **External Integrations**  
+5. **External Integrations**  
    • LinkedIn / Indeed Scraper  
-8. **Quality-of-Life**  
+6. **Quality-of-Life**  
    • LLM-powered web search to enrich project bullet points  
    • Cloud deployment scripts (Docker + CI/CD)
 
@@ -56,14 +49,16 @@ By turning a multi-hour chore into a few button-clicks, the Co-Pilot lets you fo
 
 ## Repository Structure
 ```
-├── CV_Agent/           # Streamlit MVP for resume & cover-letters
-│   ├── core/           # Business logic (parsing, Gemini calls, etc.)
-│   └── tests/          # Pytest suite for CV_Agent
-├── Job_Scraper/        # University job-board scraper (frontend and backend)
-├── jobs/               # Scraped job details and IDs
-├── .github/            # CI workflows (future)
-├── requirements.txt    # Python dependencies for all modules
-└── README.md           # You are here
+├── CV_Agent/               # Streamlit MVP for resume & cover-letters
+│   ├── core/               # Business logic (parsing, Gemini calls, etc.)
+│   └── tests/              # Pytest suite for CV_Agent
+├── Job_Scraper_full/       # University job-board scraper (full listings)
+├── Job_Scraper_shortlist/  # University job-board scraper (shortlisted jobs)
+├── Portal_Application/     # University portal auto-apply agent
+├── jobs/                   # Scraped job details and IDs
+├── .github/                # CI workflows (future)
+├── requirements.txt        # Python dependencies for all modules
+└── README.md               # You are here
 ```
 
 ---

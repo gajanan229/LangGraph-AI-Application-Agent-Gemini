@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 from typing import TYPE_CHECKING, Any, Dict, List
 import time
@@ -159,7 +160,7 @@ def adjust_projects_for_length(state: "GraphState") -> Dict[str, Any]:
     projects = {title: next(p['description'] for p in all_projects if p['title'] == title) for title in selected_titles[:4]}
 
     lines = calculate_resume_lines(summary, projects)
-    max_lines = 23
+    max_lines = 24
     too_short_threshold = max_lines - 5
     way_too_long_threshold = max_lines + 8  
     slightly_too_long_threshold = max_lines 
@@ -192,7 +193,8 @@ def adjust_projects_for_length(state: "GraphState") -> Dict[str, Any]:
     )
     llm_shorten = llm_shorten_temp.with_structured_output(ShortenedProject)
     print(f"  - Initial lines: {lines}, way_too_long_threshold: {way_too_long_threshold}, slightly_too_long_threshold: {slightly_too_long_threshold}, max_iterations: {max_iterations}, iterations: {iterations}")
-    while slightly_too_long_threshold + 2 < lines and iterations < max_iterations:
+    initial_lines_too_long = lines - max_lines # Capture initial "too long by"
+    while slightly_too_long_threshold + 1 < lines and iterations < max_iterations:
         # Find longest project
         longest_title = max(adjusted_projects, key=lambda t: len(adjusted_projects[t]))
         original_desc = adjusted_projects[longest_title] 
@@ -202,17 +204,62 @@ def adjust_projects_for_length(state: "GraphState") -> Dict[str, Any]:
         Shorten long lines, combine if needed, do not invent facts.
         always use Using the Action Verb–Duty–Result formula (other than the last bullet)
         Each sentence, except the 'Technologies used:' line, must be on its own new line, and approximately 1 line in a letter-sized page. Do not include actual bullet point characters, just newlines.
-        right now the entire resume is {lines-max_lines} lines too long. this is just 1 project, if the resume is too long (ex. greater than 1.5 lines) remove line/s from this project. do not remove the 'Technologies used:' line.        
-        
+        in the last iteration the entire resume was {initial_lines_too_long} lines too long, right now the entire resume is {lines-max_lines} lines too long. this is just 1 project, if the resume is too long (ex. greater than 1.5 lines) remove line/s from this project. do not remove the 'Technologies used:' line. 
+        always output each sentence on its own line. each sentence should be approximately 1 line in a letter-sized page. each sentence should be treated as a bullet point.     
+        always output each sentence on its own line
+
         ORIGINAL:
         {original_desc}
 
         JOB DESCRIPTION for context: 
         {jd_text}
         """
-        response = invoke_llm_with_rate_limiting(llm_shorten, prompt)
-        adjusted_projects[longest_title] = response.shortened_description
-        print(f"  - Shortened project: {longest_title}")
+        initial_lines_too_long = lines - max_lines
+        
+        try:
+            response = invoke_llm_with_rate_limiting(llm_shorten, prompt)
+            
+            # Check if response is valid
+            if response is None or not hasattr(response, 'shortened_description') or response.shortened_description is None:
+                print(f"  - LLM failed to return valid response for {longest_title}, keeping original description")
+                # If LLM fails, we can either keep original or try a simpler approach
+                # For now, let's just trim some characters from the original
+                original_lines = original_desc.split('\n')
+                if len(original_lines) > 3:
+                    # Remove one line from the middle (not first or last)
+                    original_lines.pop(-2)  # Remove second to last line
+                adjusted_projects[longest_title] = '\n'.join(original_lines)
+                continue
+            
+            # Post-process to ensure each sentence is on a new line
+            shortened_text = response.shortened_description.strip()
+            
+            # Split into sentences and clean up
+            # Split on periods followed by space and capital letter, or period at end of string
+            sentences = re.split(r'\.(?=\s+[A-Z]|$)', shortened_text)
+            
+            # Clean up each sentence and add period back if needed
+            processed_sentences = []
+            for sentence in sentences:
+                sentence = sentence.strip()
+                if sentence:  # Skip empty sentences
+                    # Add period back if it doesn't end with punctuation
+                    if not sentence.endswith(('.', ':', '!')):
+                        sentence += '.'
+                    processed_sentences.append(sentence)
+            
+            # Join with newlines to ensure each sentence is on its own line
+            adjusted_projects[longest_title] = '\n'.join(processed_sentences)
+            
+            print(f"  - Shortened project: {longest_title}")
+            print(f"  - Shortened description: {adjusted_projects[longest_title]}")
+            
+        except Exception as e:
+            print(f"  - Error shortening project {longest_title}: {e}")
+            print(f"  - Keeping original description")
+            # Fallback: keep the original description if shortening fails
+            adjusted_projects[longest_title] = original_desc
+            continue
         lines = calculate_resume_lines(summary, adjusted_projects) 
         print(f"  - Shortened lines: {lines}")
         iterations += 1

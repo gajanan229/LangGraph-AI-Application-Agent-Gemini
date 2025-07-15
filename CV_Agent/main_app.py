@@ -419,6 +419,15 @@ elif st.session_state.ui_stage == "cover_letter_studio":
                     st.rerun()
             with col1_2:
                 if st.button("✅ Finalize", type="primary"):
+                    with st.spinner("Finalizing cover letter..."):
+                        # Ensure the final cover letter PDF is generated and stored before moving to finalization
+                        # This ensures the PDF is ready when the finalization stage is rendered
+                        st.session_state.final_cover_letter_pdf = create_cover_letter_pdf(
+                            "Templates/cover_letter_template.docx", 
+                            st.session_state.generated_cl_intro,
+                            st.session_state.generated_cl_body,
+                            st.session_state.generated_cl_conclusion
+                        )
                     st.session_state.ui_stage = "finalization"
                     st.rerun()
         
@@ -427,6 +436,7 @@ elif st.session_state.ui_stage == "cover_letter_studio":
             with st.spinner("Generating preview..."):
                 full_pdf = create_cover_letter_pdf("Templates/cover_letter_template.docx", st.session_state.generated_cl_intro, st.session_state.generated_cl_body, st.session_state.generated_cl_conclusion)
                 display_pdf_preview(full_pdf, height=700)
+                st.session_state.final_cover_letter_pdf = full_pdf # Store the generated PDF
 
 # --- STAGE 4: FINALIZATION ---
 elif st.session_state.ui_stage == "finalization":
